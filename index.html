@@ -465,7 +465,9 @@
 				</tr>
 			</table>
 		</div>
-		<!--RR_NOTE-->
+		<p>
+			Russian roulette is always on in my implementation, so the images for \(m = 0\) to \(4\) are the same accumulated renders as above. The interesting one is \(m = 100\). It looks almost the same as \(m = 5\), just very slightly brighter in the corners and shadows, because bounces past 5 carry very little light. What Russian roulette buys here is speed: without it, every path would have to go all 100 bounces. With a 0.35 chance of stopping at each bounce after the first indirect one, most paths end after only a few bounces. The \(m = 100\) render took 185 seconds, compared to 129 seconds for \(m = 5\), so allowing 20 times more bounces only made it about 40% slower, and the result is still unbiased.
+		</p>
 
 		<h3>Different samples per pixel</h3>
 		<p>CBspheres_lambertian.dae, 4 light rays, max ray depth 5.</p>
