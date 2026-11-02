@@ -90,7 +90,7 @@
 		</p>
 		<p>
 			The camera turns that point into a ray. In camera space, the camera sits at the origin looking down \(-z\), and there is a virtual sensor on the plane \(z = -1\). The sensor's half-width is \(\tan(\text{hFov}/2)\) and its half-height is \(\tan(\text{vFov}/2)\) (after converting the angles from degrees to radians). So the point \((x, y)\) maps to
-			\[ \left( (2x - 1)\tan\tfrac{\text{hFov}}{2},\ (2y - 1)\tan\tfrac{\text{vFov}}{2},\ -1 \right). \]
+			\[ \left( (2x - 1)\tan\frac{\text{hFov}}{2},\ (2y - 1)\tan\frac{\text{vFov}}{2},\ -1 \right). \]
 			The ray direction goes from the origin to that point. I rotate it into world space with the camera-to-world matrix, normalize it, and use the camera's position as the ray origin. The ray's <code>min_t</code> and <code>max_t</code> are set to the near and far clipping planes, so anything outside that range is ignored.
 		</p>
 		<p>
