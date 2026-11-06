@@ -289,7 +289,7 @@
 
 		<h3>Uniform hemisphere sampling vs. light sampling</h3>
 		<p>
-			With the same number of samples, light sampling looks cleaner. In the hemisphere images, the walls and floor are grainy and the shadows under the objects have speckles, while the light sampling images are smooth. The reason is that the light is small compared to the whole hemisphere, so most random directions miss it and contribute nothing, while a few happen to hit it and contribute a lot. That gives high variance. Light sampling only picks directions that point at the light, so almost every sample is useful, and the only randomness left is whether that point on the light is blocked. Light sampling was also faster here (11.6 s vs. 29.5 s for the bunny, 6.0 s vs. 21.9 s for the spheres), since its shadow rays can stop at the first thing they hit, while a hemisphere ray has to find the closest hit to know what it's looking at. Hemisphere sampling also can't handle point lights at all, since a random direction will basically never hit a single point, which is why the dragon scene only works with light sampling. Both methods converge to the same brightness, though: the overall image looks the same, just with different amounts of noise.
+			With the same number of samples, light sampling looks cleaner. In the hemisphere images, the walls and floor are grainy and the shadows under the objects have speckles, while the light sampling images are smooth. The reason is that the light is small compared to the whole hemisphere, so most random directions miss it and contribute nothing, while a few happen to hit it and contribute a lot. That gives high variance. Light sampling only picks directions that point at the light, so almost every sample is useful, and the only randomness left is whether that point on the light is blocked. Light sampling was also faster here (11.6 s vs. 29.5 s for the bunny, 6.0 s vs. 21.9 s for the spheres), since its shadow rays can stop at the first thing they hit, while a hemisphere ray has to find the closest hit to know what it's looking at. Hemisphere sampling also can't handle point or directional lights at all, since a random direction will basically never hit a single point or match one exact direction, which is why the dragon scene only works with light sampling. The two methods don't match exactly, though: the hemisphere images are dimmer and have a glow around the light on the ceiling. A comment in the starter code says this glow difference is expected.
 		</p>
 
 		<h2>Part 4: Global Illumination</h2>
@@ -430,7 +430,7 @@
 			</table>
 		</div>
 		<p>
-			For \(m = 0\) and \(m = 1\) the two rows are almost the same, since there's nothing earlier to add except the light source itself. From \(m = 2\) on, the unaccumulated images get darker each time, while the accumulated images get brighter. The biggest jump is from \(m = 1\) to \(m = 2\), where the ceiling and shadows get filled in. After \(m = 3\) the accumulated images barely change, because each extra bounce adds less and less light.
+			For \(m = 0\) and \(m = 1\) the two rows are almost the same, since there's nothing earlier to add except the light source itself. From \(m = 2\) on, the unaccumulated images get darker each time, while the accumulated images get brighter. The biggest jump after direct lighting is from \(m = 1\) to \(m = 2\), where the ceiling and shadows get filled in. After \(m = 3\) the accumulated images barely change, because each extra bounce adds less and less light.
 		</p>
 
 		<h3>Russian roulette on CBbunny.dae</h3>
@@ -468,7 +468,7 @@
 			</table>
 		</div>
 		<p>
-			Russian roulette is always on in my implementation, so the images for \(m = 0\) to \(4\) are the same accumulated renders as above. The interesting one is \(m = 100\). It looks almost the same as \(m = 5\), just very slightly brighter in the corners and shadows, because bounces past 5 carry very little light. What Russian roulette buys here is speed: without it, every path would have to go all 100 bounces. With a 0.35 chance of stopping at each bounce after the first indirect one, most paths end after only a few bounces. The \(m = 100\) render took 185 seconds, compared to 129 seconds for \(m = 5\), so allowing 20 times more bounces only made it about 40% slower, and the result is still unbiased.
+			Russian roulette is always on in my implementation, so the images for \(m = 0\) to \(4\) are the same accumulated renders as above. The interesting one is \(m = 100\). It looks almost the same as \(m = 5\), just very slightly brighter overall, because bounces past 5 carry very little light. What Russian roulette buys here is speed: without it, every path would have to go all 100 bounces. With a 0.35 chance of stopping at each bounce after the first indirect one, most paths end after only a few bounces. The \(m = 100\) render took 185 seconds, compared to 129 seconds for \(m = 5\), so allowing 20 times more bounces only made it about 40% slower, and the result is still unbiased.
 		</p>
 
 		<h3>Different samples per pixel</h3>
@@ -565,96 +565,9 @@
 			The sample rate images show the idea working. The walls that face the light directly are mostly blue, because their brightness is stable and they converge fast. The ceiling, the soft shadows on the floor, and the darker sides of the objects are red, since their light mostly comes from random indirect bounces and needs many more samples to settle. The light source and the black background converge almost right away.
 		</p>
 
-		<h2>(Optional) Part 6: Extra Credit Opportunities</h2>
-
-		<h3>Better pixel sampler: Halton (low-discrepancy) samples</h3>
+		<h2>Acknowledgement of AI</h2>
 		<p>
-			In Part 1, every camera ray goes through a uniformly random point inside its pixel. Random points tend to clump: with 16 samples, a few usually land close together and leave gaps elsewhere in the pixel. On a pixel that is half covered by an object, those gaps make the estimate of how much of the pixel is covered noisy, which shows up as jagged, speckled edges.
-		</p>
-		<p>
-			I added an option to use the Halton sequence instead. The \(k\)-th Halton point in 2D is \((\phi_2(k), \phi_3(k))\), where \(\phi_b(k)\) is the <i>radical inverse</i> of \(k\) in base \(b\): write \(k\) in base \(b\) and mirror its digits around the decimal point. For example, \(k = 6\) is \(110_2\), so \(\phi_2(6) = 0.011_2 = 0.375\). Each new point falls into the biggest gap left by the earlier ones, so the first \(n\) points cover the pixel evenly for any \(n\). That matters here, because adaptive sampling (Part 5) can stop a pixel after any number of samples, so a fixed \(\sqrt{n} \times \sqrt{n}\) jitter grid would not work well.
-		</p>
-		<p>
-			If every pixel used the exact same points, the errors in neighboring pixels would line up into visible patterns. To avoid that, each pixel picks one random shift \(u \in [0,1)^2\) and adds it to every point, wrapping around the pixel (a Cranley–Patterson rotation):
-			\[ \text{offset}_k = \big( (\phi_2(k) + u_x) \bmod 1,\ (\phi_3(k) + u_y) \bmod 1 \big). \]
-			The shift keeps the points evenly spread, and each point is still uniform over the pixel on average, so the estimate stays unbiased.
-		</p>
-		<p>
-			<b>Implementation.</b> The change is in <code>PathTracer::raytrace_pixel</code>. I added a small <code>radical_inverse(i, base)</code> helper. At the start of each pixel I draw the random shift from the existing <code>gridSampler</code>, and for sample \(n\) the offset inside the pixel comes from the formula above instead of <code>gridSampler-&gt;get_sample()</code>. Everything after that (ray generation, adaptive sampling, averaging) is unchanged. It's turned on with a new command-line flag <code>-J</code> (a static <code>PathTracer::use_halton</code>). Without the flag the renderer behaves exactly as before.
-		</p>
-
-		<h3>Results</h3>
-		<p>
-			To measure the effect on edges, I needed a scene where pixel sampling is the main source of noise. I used dragon.dae with direct lighting only (<code>-m 1</code>) and 64 light samples (<code>-l 64</code>), which keeps lighting noise low. I turned adaptive sampling off (<code>-a 0 0</code>) so every pixel takes exactly the given number of samples. The reference is the same render at 1024 samples per pixel. "Edge pixels" are the 5,757 pixels (10% of the 240x240 image) where the reference changes sharply from a neighbor, mostly the dragon's outline against the black background.
-		</p>
-		<table class="times">
-			<tr>
-				<th>Samples per pixel</th>
-				<th>Random, all pixels</th>
-				<th>Halton, all pixels</th>
-				<th>Random, edge pixels</th>
-				<th>Halton, edge pixels</th>
-				<th>Edge error reduction</th>
-			</tr>
-			<tr><td>4</td><td>0.0284</td><td>0.0236</td><td>0.0756</td><td>0.0573</td><td>1.32x</td></tr>
-			<tr><td>16</td><td>0.0139</td><td>0.0109</td><td>0.0359</td><td>0.0240</td><td>1.50x</td></tr>
-			<tr><td>64</td><td>0.0075</td><td>0.0057</td><td>0.0187</td><td>0.0114</td><td>1.64x</td></tr>
-		</table>
-		<p style="text-align: center;">Root-mean-square error against the 1024 spp reference (pixel values from 0 to 1).</p>
-		<p>
-			Halton has lower error at every sample count, and the advantage grows as samples are added (1.32x at 4 spp, 1.64x at 64 spp). That's the expected behavior: with random samples, the error on an edge pixel drops like \(1/\sqrt{n}\), while evenly spread samples estimate the covered area faster than that. At 16 spp the Halton edges are already more accurate than the random edges at 32 spp would be (\(0.0359/\sqrt{2} \approx 0.0254\)).
-		</p>
-		<div style="display: flex; flex-direction: column; align-items: center;">
-			<table class="grid">
-				<tr>
-					<td>
-						<img src="assets/p6_dragon_random_s16.png"/>
-						<figcaption>Random, 16 spp</figcaption>
-					</td>
-					<td>
-						<img src="assets/p6_dragon_halton_s16.png"/>
-						<figcaption>Halton (<code>-J</code>), 16 spp</figcaption>
-					</td>
-					<td>
-						<img src="assets/p6_dragon_ref.png"/>
-						<figcaption>Reference, 1024 spp</figcaption>
-					</td>
-				</tr>
-				<tr>
-					<td>
-						<img src="assets/p6_crop_random_s16.png"/>
-						<figcaption>Random, 16 spp (head, 4x crop)</figcaption>
-					</td>
-					<td>
-						<img src="assets/p6_crop_halton_s16.png"/>
-						<figcaption>Halton, 16 spp (head, 4x crop)</figcaption>
-					</td>
-					<td>
-						<img src="assets/p6_crop_ref.png"/>
-						<figcaption>Reference (head, 4x crop)</figcaption>
-					</td>
-				</tr>
-				<tr>
-					<td>
-						<img src="assets/p6_err_random_s16.png"/>
-						<figcaption>Error vs. reference, random</figcaption>
-					</td>
-					<td>
-						<img src="assets/p6_err_halton_s16.png"/>
-						<figcaption>Error vs. reference, Halton</figcaption>
-					</td>
-					<td></td>
-				</tr>
-			</table>
-		</div>
-		<p>
-			dragon.dae, 240x240, <code>-m 1 -l 64 -a 0 0</code>. The top row is the unmodified <code>-f</code> output. The second row is the dragon's head cropped from those images and enlarged 4x with nearest-neighbor scaling, so each pixel is visible. The bottom row shows the per-pixel error against the reference on the same crop (black is no error, bright orange is an error of 0.15 or more). With random samples, many pixels along the horns and the outline of the head are bright, meaning the edge coverage was estimated badly. With Halton samples, the outline is much darker. The noise inside the dragon looks about the same in both, because that noise comes from the random light samples, not from where the camera ray lands in the pixel.
-		</p>
-		<p>
-			<b>Where it doesn't help much.</b> In a regular render, most of the noise comes from light samples and bounce directions, which still use random numbers. I rendered the same dragon with only 1 light sample (<code>-l 1</code>, 480x480), and there Halton only lowered the edge error by 1.03x to 1.08x across 4 to 256 spp. The whole-image error was basically unchanged. So this sampler mainly fixes aliasing on edges, and making the light and bounce sampling low-discrepancy too would be the next step for reducing noise everywhere.
-		</p>
-		<p>
-			<b>Cost.</b> The radical inverse is just a short loop with no extra rays. I timed CBspheres_lambertian.dae (480x360, 64 spp, 4 light rays, max ray depth 5, 10 threads) 6 times with each sampler, alternating the order. The medians were 7.30 s for random and 7.27 s for Halton (67.4 s and 67.2 s of total CPU time), so there's no measurable overhead.
+			I received assistance from LLMs to generate code, debug code, understand concepts and organize the html for my write up. I used Claude.
 		</p>
 		</div>
 	</body>
