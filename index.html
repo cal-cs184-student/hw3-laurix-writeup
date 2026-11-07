@@ -76,10 +76,13 @@
 
 		<h2>Overview</h2>
 		<p>
-			In this homework I built a physically based path tracer. It starts by shooting rays from the camera through each pixel and finding what they hit (spheres and triangles). To make that fast on meshes with hundreds of thousands of triangles, I added a bounding volume hierarchy (BVH). Then I added lighting in steps: first direct light only (with two different ways of sampling it), then global illumination where light bounces around the scene several times, using Russian roulette to stop paths at random. Last, I added adaptive sampling so pixels that settle quickly stop early and the hard pixels get more samples.
-		</p>
-		<p>
-			The thing that stuck with me most is how much of a "real" looking image comes from indirect light. Direct lighting alone gives black ceilings and pitch-black shadows. Once light bounces, the ceiling lights up, shadows get soft, and the red and blue walls bleed color onto the white objects. I also learned how much the way you sample matters: the same number of samples can give a clean image or a very noisy one depending on where you aim them.
+			In this homework I built a path tracer. I started with shooting rays and finding what they hit, then added a BVH to speed up large meshes, direct lighting, global illumination with Russian roulette, and adaptive sampling.
+
+			To render an image, I shoot a bunch of rays through random points in each pixel and see what each one hits. From there I check how much light reaches that point directly, then bounce the ray somewhere new to pick up indirect light, until it leaves the scene, runs out of bounces, or gets stopped by Russian roulette. A pixel's color is just the average of all its samples, so images look really grainy at low sample counts and clean up as you add more. Adaptive sampling helps by spending fewer samples on pixels that settle quickly and more on noisy spots like soft shadows and the ceiling. 
+			
+			One of the challenges I faced was render time. The BVH made a huge difference on big meshes, but at 1024 samples per pixel a single CBbunny render still took over two minutes, which adds up when you need this many images.
+
+			What stuck with me most is how much of a realistic image comes from indirect light, and that noise depends on where you aim your samples, not just how many you take.
 		</p>
 
 		<h2>Part 1: Ray Generation and Scene Intersection</h2>
@@ -567,7 +570,7 @@
 
 		<h2>Acknowledgement of AI</h2>
 		<p>
-			I received assistance from LLMs to generate code, debug code, understand concepts and organize the html for my write up. I used Claude.
+			I received assistance from LLM (Claude) to generate code, debug code, understand concepts and organize the html for my write up.
 		</p>
 		</div>
 	</body>
